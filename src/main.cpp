@@ -33,6 +33,9 @@ int main(void)
   lcd_print("TEMPERATURA");
   _delay_ms(3);
   static uint8_t last_direction = 0xFF;
+
+  int temperatura = 50;
+  int velocimetro = 1;
   while (1)
   {
 
@@ -49,6 +52,16 @@ int main(void)
         lcd_print("VELOCIDAD");
         lcd_set_cursor(1, 1); // Segunda línea
         lcd_print("TEMPERATURA");
+        if (dir == 0)
+        {
+          lcd_set_cursor(0, 0); // Primera línea
+          lcd_print(">");
+        }
+        else if (dir == 1)
+        {
+          lcd_set_cursor(0, 1); // Segunda línea
+          lcd_print(">");
+        }
         fresh = 0;
       }
 
@@ -88,6 +101,7 @@ int main(void)
     case velocidad:
     {
       uint8_t dir = read_encoder_direction();
+      static char strwachin[16]; 
       static uint8_t fresh = 1;
       if (fresh)
       {
@@ -96,6 +110,16 @@ int main(void)
         lcd_print("VELOCIDAD");
         lcd_set_cursor(1, 1); // Segunda línea
         lcd_print("ATRAS");
+        if (dir == 0)
+        {
+          lcd_set_cursor(0, 0); // Primera línea
+          lcd_print(">");
+        }
+        else if (dir == 1)
+        {
+          lcd_set_cursor(0, 1); // Segunda línea
+          lcd_print(">");
+        }
         fresh = 0;
       }
       if (dir != last_direction && dir != 0xFF)
@@ -103,7 +127,8 @@ int main(void)
         last_direction = dir;
         lcd_cmd(0x01);        // Limpia pantalla
         lcd_set_cursor(1, 0); // Primera línea
-        lcd_print("VELOCIDAD");
+        sprintf(strwachin, "VELOCIDAD:%d", velocimetro);
+        lcd_print(strwachin);
         lcd_set_cursor(1, 1); // Segunda línea
         lcd_print("ATRAS");
         if (dir == 0)
@@ -122,7 +147,7 @@ int main(void)
         fresh = 1;
         if (last_direction == 0)
         {
-          Menu = Manu1;
+          Menu = set_velo;
         }
         else
         {
@@ -135,13 +160,25 @@ int main(void)
     {
       uint8_t dir = read_encoder_direction();
       static uint8_t fresh = 1;
+      static char strwachin[16];
       if (fresh)
       {
         lcd_cmd(0x01);        // Limpia pantalla
         lcd_set_cursor(1, 0); // Primera línea
-        lcd_print("TEMPERATURA");
+        sprintf(strwachin, "TEMPERATURA:%d", temperatura);
+        lcd_print(strwachin);
         lcd_set_cursor(1, 1); // Segunda línea
         lcd_print("ATRAS");
+        if (dir == 0)
+        {
+          lcd_set_cursor(0, 0); // Primera línea
+          lcd_print(">");
+        }
+        else if (dir == 1)
+        {
+          lcd_set_cursor(0, 1); // Segunda línea
+          lcd_print(">");
+        }
         fresh = 0;
       }
       if (dir != last_direction && dir != 0xFF)
@@ -149,7 +186,8 @@ int main(void)
         last_direction = dir;
         lcd_cmd(0x01);        // Limpia pantalla
         lcd_set_cursor(1, 0); // Primera línea
-        lcd_print("TEMPERATURA");
+        sprintf(strwachin, "TEMPERATURA:%d", temperatura);
+        lcd_print(strwachin);
         lcd_set_cursor(1, 1); // Segunda línea
         lcd_print("ATRAS");
         if (dir == 0)
@@ -168,12 +206,54 @@ int main(void)
         fresh = 1;
         if (last_direction == 0)
         {
-          Menu = Manu1;
+          Menu = set_tempe;
         }
         else
         {
           Menu = Manu1;
         }
+      }
+    }
+    break;
+    case set_tempe:
+    {
+      static char strwachin[16];
+      temperatura = encoder_update();
+      if (ms_counter >= 3000) // Actualiza
+      {
+        ms_counter = 0;
+
+        lcd_cmd(0x01);        // Limpia pantalla
+        lcd_set_cursor(1, 0); // Primera línea
+        sprintf(strwachin, "TEMPERATURA:%d", temperatura);
+        lcd_print(strwachin);
+        lcd_set_cursor(1, 1); // Segunda línea
+        lcd_print("ATRAS");
+      }
+      if (read_botton1() == 1)
+      {
+        Menu = tempe;
+      }
+    }
+    break;
+    case set_velo:
+    {
+      static char strwachin[16];
+      velocimetro = encoder_update();
+      if (ms_counter >= 3000) // Actualiza
+      {
+        ms_counter = 0;
+
+        lcd_cmd(0x01);        // Limpia pantalla
+        lcd_set_cursor(1, 0); // Primera línea
+        sprintf(strwachin, "VELOCIDAD:%d", velocimetro);
+        lcd_print(strwachin);
+        lcd_set_cursor(1, 1); // Segunda línea
+        lcd_print("ATRAS");
+      }
+      if (read_botton1() == 1)
+      {
+        Menu = velocidad;
       }
     }
     break;

@@ -35,6 +35,25 @@ uint8_t read_encoder_direction()
     return direction; // 0: derecha, 1: izquierda, 0xFF: sin movimiento
 }
 
+uint8_t encoder_update(void){
+    static int16_t encoderValue = 0;
+    static uint8_t lastCLK = 0;
+
+    uint8_t currentCLK = PIND & (1 << PD5);
+
+    if ((lastCLK == 0) && (currentCLK != 0)) {  // Flanco de subida en CLK
+        uint8_t data = PIND & (1 << PD6);       // Lee DATA
+        if (data) {
+            encoderValue++;  // Sentido horario
+        } else {
+            encoderValue--;  // Sentido antihorario
+        }
+    }
+
+    lastCLK = currentCLK;
+
+    return encoderValue;
+}
 
 // Llama esta función en la ISR del Timer0
 void button_edge_task(void) {
