@@ -3,12 +3,16 @@
 #include <avr/interrupt.h>
 #include "lcd.c"
 #include "encoder.c"
+#include "motores.c"
 
 volatile uint16_t ms_counter = 0;
 volatile bool show_tiago = true;
 
 enum sexo_fernandez
 {
+  Manu,
+  inicio,
+  config,
   Manu1,
   velocidad,
   tempe,
@@ -34,13 +38,82 @@ int main(void)
   _delay_ms(3);
   static uint8_t last_direction = 0xFF;
 
+  // variables default tempe velo
   int temperatura = 50;
   int velocimetro = 1;
+  // variables default motores
+  motores_init();
+  uint8_t seq_state = 8;
+  const uint8_t DIR_FWD = 1;
+  const uint8_t DIR_REV = 0;
+  const uint32_t SPEED = 800; // pasos por segundo (ajusta)
+  const uint32_t ANG0 = 120;  // grados para motor 0
+  const uint32_t ANG1 = 20;   // grados para motor 1
+
   while (1)
   {
 
+  
     switch (Menu)
     {
+    case Manu:
+    {
+      uint8_t dir = read_encoder_direction();
+      static uint8_t fresh = 1;
+      if (fresh)
+      {
+        lcd_cmd(0x01);        // Limpia pantalla
+        lcd_set_cursor(1, 0); // Primera línea
+        lcd_print("Inicio");
+        lcd_set_cursor(1, 1); // Segunda línea
+        lcd_print("Configuracion");
+        if (dir == 0)
+        {
+          lcd_set_cursor(0, 0); // Primera línea
+          lcd_print(">");
+        }
+        else if (dir == 1)
+        {
+          lcd_set_cursor(0, 1); // Segunda línea
+          lcd_print(">");
+        }
+        fresh = 0;
+      }
+
+      if (dir != last_direction && dir != 0xFF)
+      {
+        last_direction = dir;
+        lcd_cmd(0x01);        // Limpia pantalla
+        lcd_set_cursor(1, 0); // Primera línea
+        lcd_print("Inicio");
+        lcd_set_cursor(1, 1); // Segunda línea
+        lcd_print("Configuracion");
+        if (dir == 0)
+        {
+          lcd_set_cursor(0, 0); // Primera línea
+          lcd_print(">");
+        }
+        else if (dir == 1)
+        {
+          lcd_set_cursor(0, 1); // Segunda línea
+          lcd_print(">");
+        }
+      }
+      if (read_botton1() == 1)
+      {
+        fresh = 1;
+        if (last_direction == 0)
+        {
+          Menu = inicio;
+        }
+        else
+        {
+          Menu = Manu1;
+        }
+      }
+    }
+
+    break;
     case Manu1:
     {
       uint8_t dir = read_encoder_direction();
@@ -101,7 +174,7 @@ int main(void)
     case velocidad:
     {
       uint8_t dir = read_encoder_direction();
-      static char strwachin[16]; 
+      static char strwachin[16];
       static uint8_t fresh = 1;
       if (fresh)
       {
@@ -258,12 +331,59 @@ int main(void)
     }
     break;
     }
+
+    
+    switch (seq_state)
+    {
+    case 0: // iniciar motor0 adelante
+      if (motor_move(0, ANG0, DIR_FWD, SPEED))
+        seq_state = 1;
+      break;
+
+    case 1: // esperar fin motor0 adelante
+      if (!motor_is_busy(0))
+        seq_state = 2;
+      break;
+
+    case 2: // iniciar motor0 vuelta
+      if (motor_move(0, ANG0, DIR_REV, SPEED))
+        seq_state = 3;
+      break;
+
+    case 3: // esperar fin motor0 vuelta
+      if (!motor_is_busy(0))
+        seq_state = 4;
+      break;
+
+    case 4: // iniciar motor1 adelante
+      if (motor_move(1, ANG1, DIR_FWD, SPEED))
+        seq_state = 5;
+      break;
+
+    case 5: // esperar fin motor1 adelante
+      if (!motor_is_busy(1))
+        seq_state = 6;
+      break;
+
+    case 6: // iniciar motor1 vuelta
+      if (motor_move(1, ANG1, DIR_REV, SPEED))
+        seq_state = 7;
+      break;
+
+    case 7: // esperar fin motor1 vuelta -> repetir
+      if (!motor_is_busy(1))
+        seq_state = 0;
+      break;
+    }
+
+
   }
 }
 ISR(TIMER0_COMPA_vect)
 {
   lcd_task();
   button_edge_task();
+  motor_task();
   ms_counter++;
   if (ms_counter >= 10000)
   { // 500ms (100us * 5000 = 500ms)
